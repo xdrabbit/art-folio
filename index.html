@@ -82,6 +82,8 @@
             const [newGroupName, setNewGroupName] = useState("");
             const [newItemName, setNewItemName] = useState("");
             const [file, setFile] = useState(null);
+            const [creatingTimelapse, setCreatingTimelapse] = useState(false);
+            const [timelapseUrl, setTimelapseUrl] = useState(null);
             const [lightboxIndex, setLightboxIndex] = useState(null);
 
             const API_URL = 'http://127.0.0.1:5001';
@@ -298,13 +300,40 @@
                                             <div className="version-meta">
                                                 <div className="meta-title">{v.filename}</div>
                                                 <div className="meta-sub">{prettyDateFrom(v)} {" • "} <span style={{color:'#b36a3f'}}>{timeAgoFrom(v)}</span></div>
-                                                <div className="meta-actions">
+                                                    <div className="meta-actions">
                                                     <a className="open-link" href={`${API_URL}${v.url}`} target="_blank" rel="noopener noreferrer">Preview</a>
                                                     <a className="btn secondary" href={`${API_URL}${v.url}`} download> Edit (download) </a>
                                                 </div>
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                                <div style={{marginTop:14}}>
+                                    <button className="btn" onClick={async ()=>{
+                                        if (creatingTimelapse) return;
+                                        setCreatingTimelapse(true);
+                                        setTimelapseUrl(null);
+                                        try {
+                                            const res = await fetch(`${API_URL}/api/items/${selectedItem.id}/timelapse`, { method: 'POST' });
+                                            const body = await res.json();
+                                            if (res.ok && body.url) {
+                                                setTimelapseUrl(`${API_URL}${body.url}`);
+                                            } else {
+                                                alert(body.error || 'Failed to create timelapse');
+                                            }
+                                        } catch (err) {
+                                            alert('Error creating timelapse: '+err.message);
+                                        } finally {
+                                            setCreatingTimelapse(false);
+                                        }
+                                    }}>{creatingTimelapse ? 'Rendering…' : 'Create Timelapse (mp4)'}</button>
+                                    {timelapseUrl && (
+                                        <div style={{marginTop:10}}>
+                                            <div className="u-small">Timelapse created:</div>
+                                            <video style={{width:320, borderRadius:8, marginTop:8}} src={timelapseUrl} controls />
+                                            <div style={{marginTop:6}}><a className="btn secondary" href={timelapseUrl} download>Download video</a></div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

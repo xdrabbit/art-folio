@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime, timezone
+import subprocess
+import tempfile
 
 app = Flask(__name__)
 CORS(app)
@@ -132,6 +134,61 @@ def get_versions(item_id):
         "created_at": v.created_at.isoformat() if v.created_at else None,
         "url": f"/media/{item.group_id}/{item.id}/{v.filename}"
     } for v in versions])
+
+
+@app.route('/api/items/<int:item_id>/timelapse', methods=['POST'])
+def create_timelapse(item_id):
+    """Create a simple MP4 timelapse from an item's versions using ffmpeg.
+    Requires `ffmpeg` available on PATH. Produces uploads/<group>/<item>/timelapse-<ts>.mp4
+    """
+    item = ArtItem.query.get_or_404(item_id)
+    versions = ArtVersion.query.filter_by(item_id=item.id).order_by(ArtVersion.created_at.asc()).all()
+    if not versions:
+        return jsonify({"error": "No versions found for item"}), 400
+
+    # build absolute paths and verify files exist
+    files = []
+    for v in versions:
+        full = os.path.join(app.config['UPLOAD_FOLDER'], v.filepath)
+        if os.path.exists(full):
+            files.append(full)
+
+    if not files:
+        return jsonify({"error": "No files available to make timelapse"}), 400
+
+    # make tmp concat list file
+    with tempfile.TemporaryDirectory() as tmp:
+        list_file = os.path.join(tmp, 'files.txt')
+        # 2 second duration per image (flexible)
+        duration = int(request.args.get('duration', 2))
+        with open(list_file, 'w', encoding='utf-8') as fh:
+            for p in files:
+                fh.write(f"file '{p}'\n")
+                fh.write(f"duration {duration}\n")
+            # ffmpeg requires last file listed again
+            fh.write(f"file '{files[-1]}'\n")
+
+        # ensure output dir exists
+        out_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(item.group_id), str(item.id))
+        os.makedirs(out_dir, exist_ok=True)
+        out_name = f"timelapse_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.mp4"
+        out_path = os.path.join(out_dir, out_name)
+
+        # run ffmpeg to create slideshow
+        # Use libx264 to create a widely playable MP4; keep crf sensible for size/quality.
+        cmd = [
+            'ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', list_file,
+            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-vf', 'scale=1280:-2', '-preset', 'medium', '-crf', '20', out_path
+        ]
+
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            return jsonify({"error": "ffmpeg failed", "details": e.stderr.decode('utf-8', 'ignore')}), 500
+
+    # return url to the created timelapse
+    url = f"/media/{item.group_id}/{item.id}/{out_name}"
+    return jsonify({"url": url}), 201
 
 # --- Media Serving ---
 @app.route('/media/<int:group_id>/<int:item_id>/<filename>')
