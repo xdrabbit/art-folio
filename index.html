@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtFolio</title>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Warmer, more creative look */
+        :root{
+            --bg:#fff6f0;
+            --panel:#fff;
+            --accent:#ff8a65; /* warm coral */
+            --accent-2:#ffd180; /* warm gold */
+            --muted: #6b6b6b;
+            --card-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+
+        html,body{height:100%;}
+        body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #fff0e6 0%, #f7f7fb 50%); color:#222; display:flex; align-items:center; justify-content:center; padding:32px; }
+
+        .container { width:100%; max-width:1100px; margin:auto; background:var(--panel); padding:28px; border-radius:16px; box-shadow:var(--card-shadow); border: 1px solid rgba(0,0,0,0.03); }
+
+        header.app-header{display:flex; align-items:center; gap:16px; margin-bottom:18px}
+        .logo { width:64px; height:64px; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:20px; box-shadow:0 6px 18px rgba(255,138,101,0.14); }
+        h1 { margin:0; font-size:28px; letter-spacing: -0.5px; }
+        .subtitle { color:var(--muted); margin:0; font-size:13px; }
+
+        .grid { display:grid; grid-template-columns: 240px 240px 1fr; gap:20px; margin-top:20px; align-items:start; }
+
+        .side-card { background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.9)); padding:14px; border-radius:12px; border:1px solid rgba(0,0,0,0.04); }
+        .card-title { font-size:14px; margin-bottom:8px; font-weight:600; color:#2d2d2d; }
+
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid rgba(16,16,16,0.06); border-radius: 10px; background:transparent; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); }
+
+        .btn { display:inline-flex; gap:8px; align-items:center; background: linear-gradient(90deg,var(--accent),var(--accent-2)); color: #2b1f1f; padding:10px 14px; border-radius:10px; border:none; cursor:pointer; font-weight:700; box-shadow: 0 8px 18px rgba(255,138,101,0.14); }
+        .btn.secondary{ background: white; color: #444; border:1px solid rgba(0,0,0,0.06); box-shadow:none }
+        .btn:active{ transform: translateY(1px); }
+
+        ul { list-style:none; padding:0; margin:0; }
+        .group-item, .item-item { padding: 8px 10px; margin-bottom:8px; border-radius:10px; cursor:pointer; border:1px solid transparent }
+        .group-item:hover, .item-item:hover { background: linear-gradient(90deg, rgba(255, 218, 200, 0.6), rgba(255, 238, 210, 0.6)); border-color: rgba(255,138,101,0.12) }
+        .selected { background: linear-gradient(90deg, rgba(255, 222, 210, 0.9), rgba(255, 243, 230, 0.9)); border-color: rgba(255,138,101,0.24); font-weight:700 }
+
+        .version-list { display:flex; flex-direction:column; gap:16px; margin-top:10px }
+        .version-item { display:flex; gap:12px; align-items:flex-start; border-radius:12px; padding:12px; background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.8)); border:1px solid rgba(0,0,0,0.04); }
+        .thumb { width:140px; height:140px; object-fit:cover; border-radius:8px; box-shadow: 0 6px 20px rgba(37, 10, 6, 0.08) }
+        .version-meta { display:flex; flex-direction:column; gap:8px; }
+        .meta-title { font-weight:700; color:#1b1b1b }
+        .meta-sub { font-size:13px; color:var(--muted) }
+        .meta-actions { display:flex; gap:8px; }
+        .open-link { font-size:13px; color:#b35e3a; text-decoration: none; font-weight:700; }
+
+        .u-small { font-size:12px; color:var(--muted) }
+
+        /* Make layout nicer on mobile */
+        @media (max-width: 960px){ .grid{ grid-template-columns: 1fr; } .thumb{ width:110px; height:110px } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [groups, setGroups] = useState([]);
+            const [items, setItems] = useState([]);
+            const [versions, setVersions] = useState([]);
+            const [selectedGroup, setSelectedGroup] = useState(null);
+            const [selectedItem, setSelectedItem] = useState(null);
+            
+            const [newGroupName, setNewGroupName] = useState("");
+            const [newItemName, setNewItemName] = useState("");
+            const [file, setFile] = useState(null);
+
+            const API_URL = 'http://127.0.0.1:5001';
+
+            // Fetch initial groups
+            useEffect(() => {
+                fetch(`${API_URL}/api/groups`)
+                    .then(res => res.json())
+                    .then(data => setGroups(data));
+            }, []);
+
+            // Fetch items when a group is selected
+            useEffect(() => {
+                if (selectedGroup) {
+                    fetch(`${API_URL}/api/groups/${selectedGroup.id}/items`)
+                        .then(res => res.json())
+                        .then(data => {
+                            setItems(data);
+                            setSelectedItem(null); // Reset item selection
+                            setVersions([]); // Clear versions
+                        });
+                }
+            }, [selectedGroup]);
+
+            // Fetch versions when an item is selected
+            useEffect(() => {
+                if (selectedItem) {
+                    fetch(`${API_URL}/api/items/${selectedItem.id}/versions`)
+                        .then(res => res.json())
+                        .then(data => setVersions(data));
+                }
+            }, [selectedItem]);
+
+            const handleCreateGroup = () => {
+                fetch(`${API_URL}/api/groups`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newGroupName })
+                })
+                .then(res => res.json())
+                .then(newGroup => {
+                    if(newGroup.id) {
+                        setGroups([...groups, newGroup]);
+                        setNewGroupName("");
+                    } else {
+                        alert(newGroup.error);
+                    }
+                });
+            };
+
+            const handleCreateItem = () => {
+                if (!selectedGroup) {
+                    alert("Please select a group first.");
+                    return;
+                }
+                fetch(`${API_URL}/api/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newItemName, group_id: selectedGroup.id })
+                })
+                .then(res => res.json())
+                .then(newItem => {
+                    setItems([...items, newItem]);
+                    setNewItemName("");
+                });
+            };
+
+            const handleUploadVersion = () => {
+                if (!selectedItem || !file) {
+                    alert("Please select an item and a file.");
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch(`${API_URL}/api/items/${selectedItem.id}/versions`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(newVersion => {
+                    setVersions([newVersion, ...versions]);
+                    setFile(null);
+                    document.getElementById('file-input').value = '';
+                });
+            };
+
+            // Helpers for robust date parsing / fallback
+            function parseYMDHMS(ts) {
+                if (!/^\d{14}$/.test(ts)) return null;
+                const y = +ts.slice(0,4), mo = +ts.slice(4,6)-1, d = +ts.slice(6,8);
+                const hh = +ts.slice(8,10), mm = +ts.slice(10,12), ss = +ts.slice(12,14);
+                return new Date(Date.UTC(y, mo, d, hh, mm, ss));
+            }
+
+            function prettyDateFrom(v){
+                let dt = null;
+                if (v && v.created_at) {
+                    dt = new Date(v.created_at);
+                    if (isNaN(dt.getTime())) dt = null;
+                }
+                if (!dt && v && v.filename) {
+                    const m = v.filename.match(/^(\d{14})/);
+                    if (m) dt = parseYMDHMS(m[1]);
+                }
+                if (dt && !isNaN(dt.getTime())) return dt.toLocaleString();
+                return 'Unknown date';
+            }
+
+            return (
+                <div className="container">
+                    <header className="app-header">
+                        <div className="logo">AF</div>
+                        <div>
+                            <h1>ArtFolio</h1>
+                            <div className="subtitle">Local-first, simple art versioning — designed for artists</div>
+                        </div>
+                    </header>
+                    
+                    <div className="form-section">
+                        <h2>Create New Group</h2>
+                        <input type="text" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="New Group Name" />
+                        <button className="btn" onClick={handleCreateGroup}>Create Group</button>
+                    </div>
+
+                    <div className="grid">
+                        <div className="side-card">
+                            <div className="card-title">Groups</div>
+                            <ul className="group-list">
+                                {groups.map(g => (
+                                    <li key={g.id} className={"group-item "+(selectedGroup?.id === g.id? 'selected':'')} onClick={() => setSelectedGroup(g)}>
+                                        {g.name}
+                                    </li>
+                                ))}
+                            </ul>
+                            <div style={{height:8}}></div>
+                            <div className="u-small">Tip: create themed groups such as "Studies", "Commissions" or "Series"</div>
+                        </div>
+
+                        {selectedGroup && (
+                            <div className="side-card">
+                                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                    <div>
+                                        <div className="card-title">Items in {selectedGroup.name}</div>
+                                        <div className="u-small">Select an item to view versions</div>
+                                    </div>
+                                </div>
+                                <div style={{height:10}} />
+                                <div style={{display:'flex', gap:8}}>
+                                    <input type="text" value={newItemName} onChange={e => setNewItemName(e.target.value)} placeholder="New Item Name" />
+                                    <button className="btn" onClick={handleCreateItem}>Create</button>
+                                </div>
+                                <div style={{height:8}}></div>
+                                <ul className="item-list">
+                                    {items.map(i => (
+                                        <li key={i.id} className={"item-item "+(selectedItem?.id === i.id ? 'selected':'')} onClick={() => setSelectedItem(i)}>
+                                            {i.name}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {selectedItem && (
+                            <div style={{ padding: '6px 10px', borderRadius:12 }}>
+                                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
+                                    <div>
+                                        <div className="card-title">Versions of {selectedItem.name}</div>
+                                        <div className="u-small">Click the image to preview — or use "Edit (download)" to edit locally</div>
+                                    </div>
+                                </div>
+                                <div className="side-card">
+                                    <div style={{display:'flex', gap:12, alignItems:'center'}}>
+                                        <input id="file-input" type="file" onChange={e => setFile(e.target.files[0])} />
+                                        <button className="btn" onClick={handleUploadVersion}>Upload New Version</button>
+                                    </div>
+                                </div>
+
+                                <div className="version-list">
+                                    {versions.map(v => (
+                                        <div key={v.id} className="version-item">
+                                            <a className="media-link" href={`${API_URL}${v.url}`} target="_blank" rel="noopener noreferrer">
+                                                <img className="thumb" src={`${API_URL}${v.url}`} alt={v.filename} />
+                                            </a>
+                                            <div className="version-meta">
+                                                <div className="meta-title">{v.filename}</div>
+                                                <div className="meta-sub">{prettyDateFrom(v)}</div>
+                                                <div className="meta-actions">
+                                                    <a className="open-link" href={`${API_URL}${v.url}`} target="_blank" rel="noopener noreferrer">Preview</a>
+                                                    <a className="btn secondary" href={`${API_URL}${v.url}`} download> Edit (download) </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
