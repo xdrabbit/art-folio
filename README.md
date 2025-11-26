@@ -44,6 +44,15 @@ A simple, local-first web application to organize and version digital art.
     How to use:
     - Open an item with versions, then click "Create Timelapse (mp4)" — the server will run ffmpeg and save an MP4 next to the images. You can preview and download the file.
 
+    Interpolation / smoother motion
+
+    You can optionally ask the server to interpolate frames for a smoother timelapse. The timelapse endpoint accepts the query parameter `interpolate` (integer) which multiplies output frames-per-second. For example:
+
+     - `POST /api/items/<id>/timelapse` — normal export
+     - `POST /api/items/<id>/timelapse?interpolate=2` — 2x frame rate, uses ffmpeg's `minterpolate` filter to generate intermediate frames
+
+    Note: FFmpeg's `minterpolate` is a CPU-based optical flow interpolator; it works well for many cases but may produce artefacts in very complex scenes. For higher-quality AI interpolation consider RIFE/Dain-based tools (requires GPU and additional software).
+
     If you'd prefer to open the exported images in a GUI editor like OpenShot, you can either import the exported MP4 into OpenShot or open the images directly in OpenShot and export a project there.
 
 ## API Endpoints
