@@ -56,6 +56,24 @@ def create_group():
         return jsonify({"error": "Group name is required"}), 400
     if ArtGroup.query.filter_by(name=data['name']).first():
         return jsonify({"error": "Group name already exists"}), 409
+        # optional interpolation (increase fps to create smoother motion)
+        interpolate = int(request.args.get('interpolate', 1)) if request.args.get('interpolate') else 1
+        base_fps = int(request.args.get('fps', 25))
+        if interpolate and interpolate > 1:
+            interp_out = out_path.replace('.mp4', f'.interp_{interpolate}x.mp4')
+            target_fps = base_fps * interpolate
+            cmd2 = [
+                'ffmpeg', '-y', '-i', out_path,
+                '-vf', f"minterpolate=fps={target_fps}:mi_mode=mci:mc_mode=aobmc:vsbmc=1",
+                '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'medium', '-crf', '20', interp_out
+            ]
+            try:
+                subprocess.run(cmd2, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                # use interpolated file as final
+                out_path = interp_out
+                out_name = os.path.basename(interp_out)
+            except subprocess.CalledProcessError as e:
+                return jsonify({"error": "ffmpeg interpolation failed", "details": e.stderr.decode('utf-8', 'ignore')}), 500
     
     new_group = ArtGroup(name=data['name'])
     db.session.add(new_group)
