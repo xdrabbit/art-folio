@@ -84,6 +84,7 @@
             const [file, setFile] = useState(null);
             const [creatingTimelapse, setCreatingTimelapse] = useState(false);
             const [timelapseUrl, setTimelapseUrl] = useState(null);
+            const [interpolation, setInterpolation] = useState(1);
             const [lightboxIndex, setLightboxIndex] = useState(null);
 
             const API_URL = 'http://127.0.0.1:5001';
@@ -286,9 +287,9 @@
                                 </div>
                                 <div className="side-card">
                                     <div style={{display:'flex', gap:12, alignItems:'center'}}>
-                                        <input id="file-input" type="file" onChange={e => setFile(e.target.files[0])} />
-                                        <button className="btn" onClick={handleUploadVersion}>Upload New Version</button>
-                                    </div>
+                                            <input id="file-input" type="file" onChange={e => setFile(e.target.files[0])} />
+                                            <button className="btn" onClick={handleUploadVersion}>Upload New Version</button>
+                                        </div>
                                 </div>
 
                                 <div className="version-list">
@@ -309,12 +310,22 @@
                                     ))}
                                 </div>
                                 <div style={{marginTop:14}}>
+                                    <div style={{display:'flex', gap:10, alignItems:'center', marginBottom:8}}>
+                                        <label className="u-small">Interpolation:</label>
+                                        <select onChange={e=>setInterpolation(e.target.value)} defaultValue={1} style={{padding:'8px', borderRadius:8}}>
+                                            <option value={1}>None</option>
+                                            <option value={2}>2x (smoother)</option>
+                                            <option value={3}>3x</option>
+                                            <option value={4}>4x (much smoother)</option>
+                                        </select>
+                                    </div>
                                     <button className="btn" onClick={async ()=>{
                                         if (creatingTimelapse) return;
                                         setCreatingTimelapse(true);
                                         setTimelapseUrl(null);
                                         try {
-                                            const res = await fetch(`${API_URL}/api/items/${selectedItem.id}/timelapse`, { method: 'POST' });
+                                                const url = `${API_URL}/api/items/${selectedItem.id}/timelapse` + (interpolation && +interpolation > 1 ? `?interpolate=${interpolation}` : '');
+                                                const res = await fetch(url, { method: 'POST' });
                                             const body = await res.json();
                                             if (res.ok && body.url) {
                                                 setTimelapseUrl(`${API_URL}${body.url}`);
