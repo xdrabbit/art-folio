@@ -55,6 +55,13 @@
 
         .u-small { font-size:12px; color:var(--muted) }
 
+        /* Lightbox overlay */
+        .lightbox { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(10,10,10,0.7); z-index:9999; }
+        .lightbox-inner { background: white; padding:16px; border-radius:10px; max-width:92vw; max-height:92vh; display:flex; gap:12px; align-items:center; }
+        .lightbox-inner img { max-width:75vw; max-height:80vh; object-fit:contain; display:block; }
+        .lightbox-meta { display:flex; flex-direction:column; gap:8px; max-width:28vw; }
+        .lightbox-close { position:absolute; top:18px; right:26px; font-weight:700; color:white; background:transparent; border:0; cursor:pointer; font-size:20px }
+
         /* Make layout nicer on mobile */
         @media (max-width: 960px){ .grid{ grid-template-columns: 1fr; } .thumb{ width:110px; height:110px } }
     </style>
@@ -75,6 +82,7 @@
             const [newGroupName, setNewGroupName] = useState("");
             const [newItemName, setNewItemName] = useState("");
             const [file, setFile] = useState(null);
+            const [lightboxIndex, setLightboxIndex] = useState(null);
 
             const API_URL = 'http://127.0.0.1:5001';
 
@@ -106,6 +114,18 @@
                         .then(data => setVersions(data));
                 }
             }, [selectedItem]);
+
+            // keyboard navigation for lightbox
+            useEffect(()=>{
+                function onKey(e){
+                    if (lightboxIndex === null) return;
+                    if (e.key === 'Escape') setLightboxIndex(null);
+                    if (e.key === 'ArrowRight') setLightboxIndex(i => (i+1) % Math.max(1, versions.length));
+                    if (e.key === 'ArrowLeft') setLightboxIndex(i => (i-1 + Math.max(1, versions.length)) % Math.max(1, versions.length));
+                }
+                window.addEventListener('keydown', onKey);
+                return ()=> window.removeEventListener('keydown', onKey);
+            }, [lightboxIndex, versions]);
 
             const handleCreateGroup = () => {
                 fetch(`${API_URL}/api/groups`, {
@@ -183,7 +203,24 @@
                 return 'Unknown date';
             }
 
+            function timeAgoFrom(v){
+                let dt = null;
+                if (v && v.created_at) dt = new Date(v.created_at);
+                if (!dt || isNaN(dt.getTime())){
+                    const m = v.filename && v.filename.match(/^(\d{14})/);
+                    if (m) dt = parseYMDHMS(m[1]);
+                }
+                if (!dt || isNaN(dt.getTime())) return null;
+                const sec = Math.floor((Date.now() - dt.getTime())/1000);
+                if (sec < 60) return `${sec}s ago`;
+                const min = Math.floor(sec/60); if (min < 60) return `${min}m ago`;
+                const hr = Math.floor(min/60); if (hr < 24) return `${hr}h ago`;
+                const days = Math.floor(hr/24); if (days < 7) return `${days}d ago`;
+                return dt.toLocaleDateString();
+            }
+
             return (
+                <>
                 <div className="container">
                     <header className="app-header">
                         <div className="logo">AF</div>
@@ -253,14 +290,14 @@
                                 </div>
 
                                 <div className="version-list">
-                                    {versions.map(v => (
+                                    {versions.map((v, idx) => (
                                         <div key={v.id} className="version-item">
-                                            <a className="media-link" href={`${API_URL}${v.url}`} target="_blank" rel="noopener noreferrer">
-                                                <img className="thumb" src={`${API_URL}${v.url}`} alt={v.filename} />
+                                            <a className="media-link" href={`${API_URL}${v.url}`} onClick={e=>{e.preventDefault(); setLightboxIndex(idx);}}>
+                                                <img loading="lazy" className="thumb" src={`${API_URL}${v.url}`} alt={v.filename} />
                                             </a>
                                             <div className="version-meta">
                                                 <div className="meta-title">{v.filename}</div>
-                                                <div className="meta-sub">{prettyDateFrom(v)}</div>
+                                                <div className="meta-sub">{prettyDateFrom(v)} {" • "} <span style={{color:'#b36a3f'}}>{timeAgoFrom(v)}</span></div>
                                                 <div className="meta-actions">
                                                     <a className="open-link" href={`${API_URL}${v.url}`} target="_blank" rel="noopener noreferrer">Preview</a>
                                                     <a className="btn secondary" href={`${API_URL}${v.url}`} download> Edit (download) </a>
@@ -273,6 +310,28 @@
                         )}
                     </div>
                 </div>
+
+                {lightboxIndex !== null && versions[lightboxIndex] && (
+                    <div className="lightbox" onClick={()=>setLightboxIndex(null)}>
+                        <button className="lightbox-close" onClick={(e)=>{e.stopPropagation(); setLightboxIndex(null);}}>✕</button>
+                        <div className="lightbox-inner" onClick={(e)=>e.stopPropagation()}>
+                            <img src={`${API_URL}${versions[lightboxIndex].url}`} alt={versions[lightboxIndex].filename} />
+                            <div className="lightbox-meta">
+                                <div className="meta-title">{versions[lightboxIndex].filename}</div>
+                                <div className="meta-sub">{prettyDateFrom(versions[lightboxIndex])} {" • "} <span style={{color:'#b36a3f'}}>{timeAgoFrom(versions[lightboxIndex])}</span></div>
+                                <div className="meta-actions">
+                                    <a className="open-link" href={`${API_URL}${versions[lightboxIndex].url}`} target="_blank" rel="noopener noreferrer">Open in new tab</a>
+                                    <a className="btn secondary" href={`${API_URL}${versions[lightboxIndex].url}`} download>Download / Edit</a>
+                                    <div style={{display:'flex', gap:8, marginTop:10}}>
+                                        <button className="btn secondary" onClick={()=>setLightboxIndex(i => (i-1+versions.length)%versions.length)}>Prev</button>
+                                        <button className="btn" onClick={()=>setLightboxIndex(i => (i+1)%versions.length)}>Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                </>
             );
         }
 
