@@ -38,6 +38,31 @@ Property range sampled:
 |---|---|---|---|---|
 | Storybook Stone Cottage | 900 sq ft | 2BR / 1BA + detached "Bird House" loft | 4 | Stream-side hot tub, wood fireplace, radiant stone floors, luxury linens, **no washer/dryer on site** |
 | Escape Lodge | 4,700 sq ft | 6BR / 4.5BA | 12+ | Hot tub, sauna, 3 wood fireplaces + gas fireplace, theater room, game room, copper soaking tub, antique/custom furnishings, Native American rugs |
+| The Falls | 5,500 sq ft | 5BR / 6.5BA | 14 | 4 wood fireplaces, hot tub, **two kitchens**, theater room, 4 TVs, bunk room sleeping 6+ kids (2 twin bunks, 2 full bunks, 2 trundles), down comforters/luxury bedding, on-site washer/dryer, recently renovated decor, no pets |
+
+### The Falls — deep dive (flagship-scale turnover)
+
+Overlooks Stewart Falls at the base of Mount Timpanogos with an unobstructed
+view of ~1,000 ft of waterfalls; a stream runs past the lodge (deer, elk,
+moose from the deck). Cleaning-relevant realities of this one property:
+
+- **6.5 bathrooms** to detail per turnover — likely the single biggest
+  time sink in the 11am–4pm window.
+- **4 wood-burning fireplaces** — ash removal, hearth cleaning, firewood
+  and fire-starter restock every stay.
+- **Two full kitchens** stocked with cookware, dinnerware, wine glasses,
+  small appliances (blender, crock pot, mixer, toaster) — double the
+  kitchen reset, plus consumables restock (dish soap, dish towels, coffee).
+- **Bear Bunk Room** sleeps 6+ children (bunks + trundles) — high linen
+  volume and kid-grade wear; down comforters and luxury bedding mean
+  careful laundering, though this cabin does have its own washer/dryer.
+- **Hot tub** servicing, propane BBQ cleaning, patio dining reset.
+- Amenity kit per stay: shampoo/conditioner, hair dryers, iron — hotel-style
+  restock checklist.
+- No pets and a security camera on property — fewer fur/damage variables
+  than the pet-friendly units.
+- 14 guests max: at full occupancy this is effectively a small boutique
+  hotel flip in five hours — realistically a multi-person crew job.
 
 ## Operational facts relevant to Liz's cleaning services
 
